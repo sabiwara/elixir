@@ -1378,6 +1378,33 @@ defmodule Enum do
   end
 
   @doc """
+  Returns a map with the `enumerable` indexed by `key_fun`.
+
+  The result is a map where each key is given by `key_fun`
+  and each value is given by `value_fun` if provided (defaults to identity).
+  If a key appears multiple times, the first occurence of this key from the
+  `enumerable` will be kept.
+
+  ## Examples
+
+      iex> Enum.key_by(~w{ant buffalo bat cat dingo}, &String.first/1)
+      %{"a" => "ant", "b" => "buffalo", "c" => "cat", "d" => "dingo"}
+
+      iex> Enum.key_by(~w{ant buffalo bat cat dingo}, &String.first/1, &String.length/1)
+      %{"a" => 3, "b" => 7, "c" => 3, "d" => 5}
+
+  """
+  @spec key_by(t, (element -> any), (element -> any)) :: map
+  def key_by(enumerable, key_fun, value_fun \\ fn x -> x end) when is_function(key_fun) do
+    reduce(enumerable, %{}, fn entry, acc ->
+      key = key_fun.(entry)
+      value = value_fun.(entry)
+
+      Map.put_new(acc, key, value)
+    end)
+  end
+
+  @doc """
   Returns a list where each element is the result of invoking
   `fun` on each corresponding element of `enumerable`.
 

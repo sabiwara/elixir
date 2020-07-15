@@ -337,6 +337,11 @@ defmodule EnumTest do
     assert Enum.join(fn acc, _ -> acc end, ".") == ""
   end
 
+  test "key_by/3" do
+    assert Enum.key_by([], fn _ -> raise "oops" end) == %{}
+    assert Enum.key_by([1, 2, 3], &rem(&1, 2)) == %{0 => 2, 1 => 1}
+  end
+
   test "map/2" do
     assert Enum.map([], fn x -> x * 2 end) == []
     assert Enum.map([1, 2, 3], fn x -> x * 2 end) == [2, 4, 6]
@@ -1385,6 +1390,13 @@ defmodule EnumTest.Range do
     assert Enum.join(1..0, " = ") == "1 = 0"
     assert Enum.join(1..3, " = ") == "1 = 2 = 3"
     assert Enum.join(1..3) == "123"
+  end
+
+  test "key_by/3" do
+    assert Enum.key_by(1..6, &rem(&1, 3)) == %{0 => 3, 1 => 1, 2 => 2}
+
+    assert Enum.key_by(1..6, &rem(&1, 3), &(&1 * 2)) ==
+             %{0 => 6, 1 => 2, 2 => 4}
   end
 
   test "map/2" do
