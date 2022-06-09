@@ -81,6 +81,23 @@ defmodule CodeFragmentTest do
       assert CF.cursor_context("foo.hello/") == {:dot_arity, {:var, 'foo'}, 'hello'}
       assert CF.cursor_context(":foo.hello/") == {:dot_arity, {:unquoted_atom, 'foo'}, 'hello'}
       assert CF.cursor_context("@f.hello/") == {:dot_arity, {:module_attribute, 'f'}, 'hello'}
+
+      assert CF.cursor_context("Foo.\nhello/") == {:dot_arity, {:alias, 'Foo'}, 'hello'}
+      # TODO: make the following pass
+      # assert CF.cursor_context("Foo\n.hello/") == {:dot_arity, {:alias, 'Foo'}, 'hello'}
+      # assert CF.cursor_context("Foo\n.\nhello/") == {:dot_arity, {:alias, 'Foo'}, 'hello'}
+
+      assert CF.cursor_context("Foo.\r\nhello/") == {:dot_arity, {:alias, 'Foo'}, 'hello'}
+      # TODO: make the following pass
+      # assert CF.cursor_context("Foo\r\n.hello/") == {:dot_arity, {:alias, 'Foo'}, 'hello'}
+      # assert CF.cursor_context("Foo\r\n.\r\nhello/") == {:dot_arity, {:alias, 'Foo'}, 'hello'}
+
+      assert CF.cursor_context("Foo.\n# comment\nhello/") ==
+               {:dot_arity, {:alias, 'Foo'}, 'hello'}
+
+      # TODO: make the following pass
+      # assert CF.cursor_context("Foo\n . # dot\n hello/") ==
+      #          {:dot_arity, {:alias, 'Foo'}, 'hello'}
     end
 
     test "dot_call" do

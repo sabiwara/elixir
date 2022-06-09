@@ -140,15 +140,21 @@ defmodule Code.Fragment do
           binary
 
         matches ->
-          {position, _} = List.last(matches)
-          binary_part(binary, position + 1, byte_size(binary) - position - 1)
+          [{position, _} | reverse_matches] = :lists.reverse(matches)
+          last_binary = binary_part(binary, position + 1, byte_size(binary) - position - 1)
+
+          previous_non_empty =
+            binary
+            |> lookup_binary_matches(reverse_matches, position)
+            |> String.replace_trailing("\r", "")
+
+          case cursor_context_line(previous_non_empty, opts) do
+            {:dot, _, _} -> previous_non_empty <> last_binary
+            _ -> last_binary
+          end
       end
 
-    binary
-    |> String.to_charlist()
-    |> :lists.reverse()
-    |> codepoint_cursor_context(opts)
-    |> elem(0)
+    cursor_context_line(binary, opts)
   end
 
   def cursor_context(charlist, opts) when is_list(charlist) and is_list(opts) do
@@ -159,14 +165,48 @@ defmodule Code.Fragment do
         rest -> rest
       end
 
+    cursor_context_line(charlist, opts)
+  end
+
+  def cursor_context(other, opts) when is_list(opts) do
+    cursor_context(to_charlist(other), opts)
+  end
+
+  defp cursor_context_line(binary, opts) when is_binary(binary) do
+    binary
+    |> String.to_charlist()
+    |> cursor_context_line(opts)
+  end
+
+  defp cursor_context_line(charlist, opts) when is_list(charlist) do
     charlist
     |> :lists.reverse()
     |> codepoint_cursor_context(opts)
     |> elem(0)
   end
 
-  def cursor_context(other, opts) when is_list(opts) do
-    cursor_context(to_charlist(other), opts)
+  defp lookup_binary_matches(binary, matches, last_position)
+
+  defp lookup_binary_matches(binary, _, last_position) when last_position < 1 do
+    ""
+  end
+
+  defp lookup_binary_matches(binary, [], last_position) do
+    binary_part(binary, 0, last_position)
+  end
+
+  defp lookup_binary_matches(binary, [{position, _} | rest], last_position) do
+    chunk = binary_part(binary, position + 1, last_position - position - 1)
+
+    if empty_or_commented_line?(chunk) do
+      lookup_binary_matches(binary, rest, position)
+    else
+      chunk
+    end
+  end
+
+  defp empty_or_commented_line?(binary) when is_binary(binary) do
+    binary =~ ~r/^\s*($|#)/
   end
 
   @operators '\\<>+-*/:=|&~^%!'
