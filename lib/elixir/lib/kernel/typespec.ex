@@ -552,7 +552,9 @@ defmodule Kernel.Typespec do
     {{:type, line(meta), :map, fields}, state}
   end
 
-  defp typespec({:%, _, [name, {:%{}, meta, fields}]}, vars, caller, state) do
+  defp typespec({:%, _, [name, {:%{}, meta, fields}]}, vars, caller, state)
+       when is_atom(name)
+       when is_tuple(name) and elem(name, 0) in [:__aliases__, :__MODULE__] do
     module = Macro.expand(name, %{caller | function: {:__info__, 1}})
 
     struct =
@@ -841,7 +843,7 @@ defmodule Kernel.Typespec do
     {{:type, line(meta), :fun, args}, state}
   end
 
-  defp typespec({name, meta, args}, vars, caller, state) when is_atom(name) do
+  defp typespec({name, meta, args}, vars, caller, state) when is_atom(name) and name != :% do
     {args, state} = :lists.mapfoldl(&typespec(&1, vars, caller, &2), state, args)
     arity = length(args)
 
