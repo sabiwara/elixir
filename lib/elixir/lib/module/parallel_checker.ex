@@ -324,7 +324,7 @@ defmodule Module.ParallelChecker do
 
   defp format_file_line(file, line) do
     file = Path.relative_to_cwd(file)
-    line = if line > 0, do: [?: | Integer.to_string(line)], else: []
+    line = if line && line > 0, do: [?: | Integer.to_string(line)], else: []
     ["  ", file, line]
   end
 
