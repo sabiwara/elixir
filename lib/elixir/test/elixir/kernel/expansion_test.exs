@@ -720,105 +720,79 @@ defmodule Kernel.ExpansionTest do
 
   describe "comprehensions" do
     test "variables do not leak with enums" do
-      before_expansion =
-        quote do
-          for(a <- b, do: c = 1)
-          c
-        end
-
-      after_expansion =
-        quote do
-          for(a <- b(), do: c = 1)
-          c()
-        end
-
-      assert expand(before_expansion) == after_expansion
+      assert_compile_error("undefined variable \"c\"", fn ->
+        expand(
+          quote do
+            for(a <- b(), do: c = 1)
+            c
+          end
+        )
+      end)
     end
 
     test "variables do not leak with binaries" do
-      before_expansion =
-        quote do
-          for(<<a <- b>>, do: c = 1)
-          c
-        end
-
-      after_expansion =
-        quote do
-          for(<<(<<a::integer>> <- b())>>, do: c = 1)
-          c()
-        end
-
-      assert expand(before_expansion) |> clean_meta([:alignment]) ==
-               clean_bit_modifiers(after_expansion)
+      assert_compile_error("undefined variable \"c\"", fn ->
+        expand(
+          quote do
+            for(<<a <- b()>>, do: c = 1)
+            c
+          end
+        )
+      end)
     end
 
     test "variables inside generator args do not leak" do
-      before_expansion =
-        quote do
-          for(
-            b <-
-              (
-                a = 1
-                [2]
-              ),
-            do: {a, b}
-          )
+      assert_compile_error("undefined variable \"a\"", fn ->
+        expand(
+          quote do
+            for(
+              b <-
+                (
+                  a = 1
+                  [2]
+                ),
+              do: {a, b}
+            )
+          end
+        )
+      end)
 
-          a
-        end
+      assert_compile_error("undefined variable \"a\"", fn ->
+        expand(
+          quote do
+            for(
+              b <-
+                (
+                  a = 1
+                  [2]
+                ),
+              do: b
+            )
 
-      after_expansion =
-        quote do
-          for(
-            b <-
-              (
-                a = 1
-                [2]
-              ),
-            do: {a(), b}
-          )
+            a
+          end
+        )
+      end)
 
-          a()
-        end
-
-      assert expand(before_expansion) == after_expansion
-
-      before_expansion =
-        quote do
-          for(
-            b <-
-              (
-                a = 1
-                [2]
-              ),
-            d <-
-              (
-                c = 3
-                [4]
-              ),
-            do: {a, b, c, d}
-          )
-        end
-
-      after_expansion =
-        quote do
-          for(
-            b <-
-              (
-                a = 1
-                [2]
-              ),
-            d <-
-              (
-                c = 3
-                [4]
-              ),
-            do: {a(), b, c(), d},
-            into: []
-          )
-        end
-
-      assert expand(before_expansion) == after_expansion
+      assert_compile_error(["undefined variable \"a\"", "undefined variable \"c\""], fn ->
+        expand(
+          quote do
+            for(
+              b <-
+                (
+                  a = 1
+                  [2]
+                ),
+              d <-
+                (
+                  c = 3
+                  [4]
+                ),
+              do: {a, b, c, d}
+            )
+          end
+        )
+      end)
     end
 
     test "variables inside filters are available in blocks" do
@@ -827,33 +801,23 @@ defmodule Kernel.ExpansionTest do
     end
 
     test "variables inside options do not leak" do
-      before_expansion =
-        quote do
-          for(a <- c = b, into: [], do: 1)
-          c
-        end
+      assert_compile_error("undefined variable \"c\"", fn ->
+        expand(
+          quote do
+            for(a <- c = b(), into: [], do: 1)
+            c
+          end
+        )
+      end)
 
-      after_expansion =
-        quote do
-          for(a <- c = b(), do: 1, into: [])
-          c()
-        end
-
-      assert expand(before_expansion) == after_expansion
-
-      before_expansion =
-        quote do
-          for(a <- b, into: c = [], do: 1)
-          c
-        end
-
-      after_expansion =
-        quote do
-          for(a <- b(), do: 1, into: c = [])
-          c()
-        end
-
-      assert expand(before_expansion) == after_expansion
+      assert_compile_error("undefined variable \"c\"", fn ->
+        expand(
+          quote do
+            for(a <- b(), into: c = [], do: 1)
+            c
+          end
+        )
+      end)
     end
 
     test "must start with generators" do
@@ -925,87 +889,68 @@ defmodule Kernel.ExpansionTest do
 
   describe "with" do
     test "variables do not leak" do
-      before_expansion =
-        quote do
-          with({foo} <- {bar}, do: baz = :ok)
-          baz
-        end
-
-      after_expansion =
-        quote do
-          with({foo} <- {bar()}, do: baz = :ok)
-          baz()
-        end
-
-      assert expand(before_expansion) == after_expansion
+      assert_compile_error("undefined variable \"baz\"", fn ->
+        expand(
+          quote do
+            with({foo} <- {bar()}, do: baz = :ok)
+            baz
+          end
+        )
+      end)
     end
 
     test "variables inside args expression do not leak" do
-      before_expansion =
-        quote do
-          with(
-            b <-
-              (
-                a = 1
-                2
-              ),
-            do: {a, b}
-          )
+      assert_compile_error("undefined variable \"a\"", fn ->
+        expand(
+          quote do
+            with(
+              b <-
+                (
+                  a = 1
+                  2
+                ),
+              do: {a, b}
+            )
+          end
+        )
+      end)
 
-          a
-        end
+      assert_compile_error("undefined variable \"a\"", fn ->
+        expand(
+          quote do
+            with(
+              b <-
+                (
+                  a = 1
+                  2
+                ),
+              do: b
+            )
 
-      after_expansion =
-        quote do
-          with(
-            b <-
-              (
-                a = 1
-                2
-              ),
-            do: {a(), b}
-          )
+            a
+          end
+        )
+      end)
 
-          a()
-        end
-
-      assert expand(before_expansion) == after_expansion
-
-      before_expansion =
-        quote do
-          with(
-            b <-
-              (
-                a = 1
-                2
-              ),
-            d <-
-              (
-                c = 3
-                4
-              ),
-            do: {a, b, c, d}
-          )
-        end
-
-      after_expansion =
-        quote do
-          with(
-            b <-
-              (
-                a = 1
-                2
-              ),
-            d <-
-              (
-                c = 3
-                4
-              ),
-            do: {a(), b, c(), d}
-          )
-        end
-
-      assert expand(before_expansion) == after_expansion
+      assert_compile_error(["undefined variable \"a\"", "undefined variable \"c\""], fn ->
+        expand(
+          quote do
+            with(
+              b <-
+                (
+                  a = 1
+                  2
+                ),
+              d <-
+                (
+                  c = 3
+                  4
+                ),
+              do: {a, b, c, d}
+            )
+          end
+        )
+      end)
     end
 
     test "variables are available in do option" do
@@ -1025,19 +970,14 @@ defmodule Kernel.ExpansionTest do
     end
 
     test "variables inside else do not leak" do
-      before_expansion =
-        quote do
-          with({foo} <- {bar}, do: :ok, else: (baz -> baz))
-          baz
-        end
-
-      after_expansion =
-        quote do
-          with({foo} <- {bar()}, do: :ok, else: (baz -> baz))
-          baz()
-        end
-
-      assert expand(before_expansion) == after_expansion
+      assert_compile_error("undefined variable \"baz\"", fn ->
+        expand(
+          quote do
+            with({foo} <- {bar()}, do: :ok, else: (baz -> baz))
+            baz
+          end
+        )
+      end)
     end
 
     test "fails if \"do\" is missing" do
