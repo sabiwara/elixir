@@ -2379,84 +2379,81 @@ defmodule EnumTest.Range do
   end
 end
 
-defmodule EnumTest.Map do
-  # Maps use different protocols path than lists and ranges in the cases below.
+defmodule EnumTest.Stream do
+  # Streams use different protocols path than lists and ranges in the cases below.
   use ExUnit.Case, async: true
 
+  defp stream(enum), do: Stream.map(enum, & &1)
+
   test "random/1" do
-    map = %{a: 1, b: 2, c: 3}
-    [x1, x2, x3] = Map.to_list(map)
+    stream = stream(1..3)
     seed1 = {1406, 407_414, 139_258}
     seed2 = {1406, 421_106, 567_597}
     :rand.seed(:exsss, seed1)
-    assert Enum.random(map) == x3
-    assert Enum.random(map) == x1
-    assert Enum.random(map) == x2
+    assert Enum.random(stream) == 3
+    assert Enum.random(stream) == 3
+    assert Enum.random(stream) == 3
 
     :rand.seed(:exsss, seed2)
-    assert Enum.random(map) == x3
-    assert Enum.random(map) == x2
+    assert Enum.random(stream) == 1
+    assert Enum.random(stream) == 3
   end
 
   test "take_random/2" do
     # corner cases, independent of the seed
-    assert_raise FunctionClauseError, fn -> Enum.take_random(1..2, -1) end
-    assert Enum.take_random(%{a: 1}, 0) == []
-    assert Enum.take_random(%{a: 1}, 2) == [a: 1]
-    assert Enum.take_random(%{a: 1, b: 2}, 0) == []
+    assert_raise FunctionClauseError, fn -> stream(1..2) |> Enum.take_random(-1) end
+    assert stream(1..1) |> Enum.take_random(0) == []
+    assert stream(1..1) |> Enum.take_random( 2) == [ 1]
+    assert  stream(1..2) |> Enum.take_random(0) == []
 
     # set a fixed seed so the test can be deterministic
     # please note the order of following assertions is important
-    map = %{a: 1, b: 2, c: 3}
-    [x1, x2, x3] = Map.to_list(map)
+    stream = stream(1..3)
     seed1 = {1406, 407_414, 139_258}
     seed2 = {1406, 421_106, 567_597}
     :rand.seed(:exsss, seed1)
-    assert Enum.take_random(map, 1) == [x3]
+    assert Enum.take_random(stream, 1) == [3]
     :rand.seed(:exsss, seed1)
-    assert Enum.take_random(map, 2) == [x3, x1]
+    assert Enum.take_random(stream, 2) == [3, 1]
     :rand.seed(:exsss, seed1)
-    assert Enum.take_random(map, 3) == [x3, x1, x2]
+    assert Enum.take_random(stream, 3) == [3, 1, 2]
     :rand.seed(:exsss, seed1)
-    assert Enum.take_random(map, 4) == [x3, x1, x2]
+    assert Enum.take_random(stream, 4) == [3, 1, 2]
     :rand.seed(:exsss, seed2)
-    assert Enum.take_random(map, 1) == [x1]
+    assert Enum.take_random(stream, 1) == [1]
     :rand.seed(:exsss, seed2)
-    assert Enum.take_random(map, 2) == [x1, x3]
+    assert Enum.take_random(stream, 2) == [1, 3]
     :rand.seed(:exsss, seed2)
-    assert Enum.take_random(map, 3) == [x1, x3, x2]
+    assert Enum.take_random(stream, 3) == [1, 3, 2]
     :rand.seed(:exsss, seed2)
-    assert Enum.take_random(map, 4) == [x1, x3, x2]
+    assert Enum.take_random(stream, 4) == [1, 3, 2]
   end
 
   test "reverse/1" do
-    assert Enum.reverse(%{}) == []
-    assert Enum.reverse(MapSet.new()) == []
-
-    map = %{a: 1, b: 2, c: 3}
-    assert Enum.reverse(map) == Map.to_list(map) |> Enum.reverse()
+    assert stream([]) |> Enum.reverse() == []
+    assert stream(1..3) |> Enum.reverse() == [3, 2, 1]
   end
 
   test "reverse/2" do
-    assert Enum.reverse([a: 1, b: 2, c: 3, a: 1], %{x: 1}) == [a: 1, c: 3, b: 2, a: 1, x: 1]
+    stream = stream(1..3)
 
-    assert Enum.reverse([], %{a: 1}) == [a: 1]
-    assert Enum.reverse([], %{}) == []
-    assert Enum.reverse(%{a: 1}, []) == [a: 1]
-    assert Enum.reverse(MapSet.new(), %{}) == []
+    assert Enum.reverse([:a, :b, :c], stream) == [:c, :b, :a, 1, 2, 3]
+    assert Enum.reverse([], stream) == [1, 2, 3]
+    assert Enum.reverse([], stream([])) == []
+    assert Enum.reverse(stream, [:a, :b, :c]) == [3, 2, 1, :a, :b, :c]
+    assert Enum.reverse(stream, stream) == [3, 2, 1, 1, 2, 3]
   end
 
   test "fetch/2" do
-    map = %{a: 1, b: 2, c: 3, d: 4, e: 5}
-    [x1, _x2, _x3, x4, x5] = Map.to_list(map)
-    assert Enum.fetch(map, 0) == {:ok, x1}
-    assert Enum.fetch(map, -2) == {:ok, x4}
-    assert Enum.fetch(map, -6) == :error
-    assert Enum.fetch(map, 5) == :error
-    assert Enum.fetch(%{}, 0) == :error
+    stream = stream(1..5)
+    assert Enum.fetch(stream, 0) == {:ok, 1}
+    assert Enum.fetch(stream, -2) == {:ok, 4}
+    assert Enum.fetch(stream, -6) == :error
+    assert Enum.fetch(stream, 5) == :error
+    assert Enum.fetch(stream([]), 0) == :error
 
-    assert Stream.take(map, 3) |> Enum.fetch(3) == :error
-    assert Stream.take(map, 5) |> Enum.fetch(4) == {:ok, x5}
+    assert Stream.take(stream, 3) |> Enum.fetch(3) == :error
+    assert Stream.take(stream, 5) |> Enum.fetch(4) == {:ok, 5}
   end
 
   test "map_intersperse/3" do
