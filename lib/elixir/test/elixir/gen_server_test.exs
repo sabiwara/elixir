@@ -207,7 +207,8 @@ defmodule GenServerTest do
     {:ok, pid} = GenServer.start(Stack, [])
 
     assert GenServer.call(pid, :stop_self) ==
-             {:calling_self, {GenServer, :stop, [pid, :normal, :infinity]}}
+             {{:calling_self, {:sys, :terminate, [pid, :normal, :infinity]}},
+              {GenServer, :stop, [pid, :normal, :infinity]}}
 
     {:ok, _} = GenServer.start(Stack, [], name: name)
     assert GenServer.stop(name, :normal) == :ok

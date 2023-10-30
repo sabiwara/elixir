@@ -1064,9 +1064,6 @@ defmodule GenServer do
       nil ->
         exit({:noproc, {__MODULE__, :stop, [server, reason, timeout]}})
 
-      pid when pid == self() ->
-        exit({:calling_self, {__MODULE__, :stop, [server, reason, timeout]}})
-
       pid ->
         try do
           :proc_lib.stop(pid, reason, timeout)
