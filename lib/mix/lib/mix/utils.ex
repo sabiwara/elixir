@@ -174,7 +174,17 @@ defmodule Mix.Utils do
     modified_target = targets |> Enum.map(&last_modified/1) |> Enum.min()
 
     Stream.filter(sources, fn source ->
-      last_modified(source) > modified_target
+      tap(last_modified(source) > modified_target, fn stale? ->
+        if stale? do
+          dbg({
+            :stale,
+            source,
+            modified_target,
+            Enum.map(sources, &{&1, last_modified(&1)}),
+            Enum.map(targets, &{&1, last_modified(&1)})
+          })
+        end
+      end)
     end)
   end
 

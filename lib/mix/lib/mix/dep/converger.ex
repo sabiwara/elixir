@@ -69,7 +69,8 @@ defmodule Mix.Dep.Converger do
   See `Mix.Dep.Loader.children/1` for options.
   """
   def converge(opts \\ []) do
-    converge(nil, nil, opts, &{&1, &2, &3}) |> elem(0)
+    converge(nil, nil, opts, &{&1, &2, &3})
+    |> elem(0)
   end
 
   @doc """
@@ -161,6 +162,9 @@ defmodule Mix.Dep.Converger do
     state = %{locked?: locked?, env_target: env_target, cache: cache, callback: callback}
     {deps, _optional, rest, lock} = all(main, [], [], apps, [], rest, lock, state)
     deps = Enum.reverse(deps)
+
+    dbg(for dep <- deps, do: {dep.app, dep.status})
+
     # When traversing dependencies, we keep skipped ones to
     # find conflicts. We remove them now after traversal.
     {deps, _} = Mix.Dep.Loader.split_by_env_and_target(deps, env_target)

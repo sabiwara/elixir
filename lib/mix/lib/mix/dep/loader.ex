@@ -107,6 +107,9 @@ defmodule Mix.Dep.Loader do
       end
 
     validate_app(%{dep | deps: attach_only_and_targets(children, opts)})
+    |> tap(fn dep ->
+      dbg({dep.app, dep.status})
+    end)
   end
 
   @doc """
@@ -402,12 +405,16 @@ defmodule Mix.Dep.Loader do
     end
   end
 
-  defp recently_fetched?(%Mix.Dep{opts: opts, scm: scm}) do
-    scm.fetchable?() &&
-      Mix.Utils.stale?(
-        join_stale(opts, :dest, ".fetch"),
-        join_stale(opts, :build, ".mix/compile.fetch")
-      )
+  defp recently_fetched?(%Mix.Dep{opts: opts, scm: scm, app: app}) do
+    dbg(app)
+
+    dbg(
+      scm.fetchable?() &&
+        Mix.Utils.stale?(
+          join_stale(opts, :dest, ".fetch"),
+          join_stale(opts, :build, ".mix/compile.fetch")
+        )
+    )
   end
 
   defp join_stale(opts, key, file) do
