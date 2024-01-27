@@ -153,7 +153,9 @@ defmodule Mix.Dep do
   end
 
   defp converge_and_load(opts) do
-    for %{app: app, opts: opts} = dep <- Mix.Dep.Converger.converge(opts) do
+    log = fn deps -> dbg(for dep <- deps, do: {dep.app, dep.status}) end
+
+    for %{app: app, opts: opts} = dep <- Mix.Dep.Converger.converge(opts) |> tap(log) do
       case Keyword.pop(opts, :app_properties) do
         {nil, _opts} ->
           dep

@@ -163,8 +163,6 @@ defmodule Mix.Dep.Converger do
     {deps, _optional, rest, lock} = all(main, [], [], apps, [], rest, lock, state)
     deps = Enum.reverse(deps)
 
-    dbg(for dep <- deps, do: {dep.app, dep.status})
-
     # When traversing dependencies, we keep skipped ones to
     # find conflicts. We remove them now after traversal.
     {deps, _} = Mix.Dep.Loader.split_by_env_and_target(deps, env_target)
