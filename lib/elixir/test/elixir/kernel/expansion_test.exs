@@ -1009,7 +1009,7 @@ defmodule Kernel.ExpansionTest do
       after_expansion =
         quote do
           with(
-            b <-
+            b =
               (
                 a = 1
                 2
@@ -1042,12 +1042,12 @@ defmodule Kernel.ExpansionTest do
       after_expansion =
         quote do
           with(
-            b <-
+            b =
               (
                 a = 1
                 2
               ),
-            d <-
+            d =
               (
                 c = 3
                 4
