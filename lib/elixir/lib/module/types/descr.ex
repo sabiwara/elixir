@@ -826,21 +826,20 @@ defmodule Module.Types.Descr do
   defp filter_empty_negations(_tag, _fields, []), do: []
 
   defp filter_empty_negations(tag, fields, [{neg_tag, neg_fields} | negs]) do
-    try do
-      for {neg_key, neg_type} when not is_map_key(fields, neg_key) <- neg_fields do
+    no_intersection =
+      Enum.any?(neg_fields, fn {neg_key, neg_type} ->
         # key is required, and the positive map is closed: empty intersection
-        if tag == :closed and not is_optional?(neg_type), do: throw(:no_intersection)
-      end
-
-      for {key, type} when not is_map_key(neg_fields, key) <- fields,
+        not is_map_key(fields, neg_key) and tag == :closed and not is_optional?(neg_type)
+      end) or
+        Enum.any?(fields, fn {key, type} ->
           # key is required, and the negative map is closed: empty intersection
-          not is_optional?(type) and neg_tag == :closed do
-        throw(:no_intersection)
-      end
+          not is_map_key(neg_fields, key) and not is_optional?(type) and neg_tag == :closed
+        end)
 
+    if no_intersection do
+      filter_empty_negations(tag, fields, negs)
+    else
       [{neg_tag, neg_fields} | filter_empty_negations(tag, fields, negs)]
-    catch
-      :no_intersection -> filter_empty_negations(tag, fields, negs)
     end
   end
 
