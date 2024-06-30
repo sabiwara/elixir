@@ -74,6 +74,8 @@ cache_env(#{line := Line, module := Module} = E) ->
         PrevKey;
       _ ->
         NewKey = PrevKey + 1,
+        % Optimization if we are in the same process
+        erlang:put({cache_env, Module, NewKey}, Cache),
         ets:insert(Set, [{{cache_env, NewKey}, Cache}, {?cache, NewKey}]),
         NewKey
     end,
@@ -81,8 +83,16 @@ cache_env(#{line := Line, module := Module} = E) ->
   {Module, {Line, Pos}}.
 
 get_cached_env({Module, {Line, Pos}}) ->
-  {Set, _} = elixir_module:data_tables(Module),
-  (ets:lookup_element(Set, {cache_env, Pos}, 2))#{line := Line};
+  Cached = case erlang:get({cache_env, Module, Pos}) of
+    undefined ->
+      % io:format('MISSED! ~p~n', [Module]),
+      {Set, _} = elixir_module:data_tables(Module),
+      (ets:lookup_element(Set, {cache_env, Pos}, 2));
+    Cache ->
+      % io:format('Hit ~p~n', [Module]),
+      Cache
+  end,
+  Cached#{line := Line};
 get_cached_env(Env) ->
   Env.
 
