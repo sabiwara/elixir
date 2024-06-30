@@ -70,11 +70,11 @@ cache_env(#{line := Line, module := Module} = E) ->
 
   Pos =
     case ets:lookup(Set, {cache_env, PrevKey}) of
-      [{_, Cache}] ->
+      [{_, Cache, _}] ->
         PrevKey;
       _ ->
         NewKey = PrevKey + 1,
-        ets:insert(Set, [{{cache_env, NewKey}, Cache}, {?cache, NewKey}]),
+        ets:insert(Set, [{{cache_env, NewKey}, Cache, self()}, {?cache, NewKey}]),
         NewKey
     end,
 
@@ -82,7 +82,13 @@ cache_env(#{line := Line, module := Module} = E) ->
 
 get_cached_env({Module, {Line, Pos}}) ->
   {Set, _} = elixir_module:data_tables(Module),
-  (ets:lookup_element(Set, {cache_env, Pos}, 2))#{line := Line};
+  Self = self(),
+  case ets:lookup_element(Set, {cache_env, Pos}, 3) of
+    Self ->
+      (ets:lookup_element(Set, {cache_env, Pos}, 2))#{line := Line};
+    Pid ->
+      throw({Module, Pos, Self, Pid})
+  end;
 get_cached_env(Env) ->
   Env.
 
