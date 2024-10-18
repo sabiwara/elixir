@@ -629,6 +629,23 @@ defmodule Code.Normalizer.QuotedASTTest do
       assert quoted_to_string(quote(do: foo |> [bar: :baz])) == "foo |> [bar: :baz]"
     end
 
+    test "regression with keyword args with __cursor__" do
+      ast =
+        Code.string_to_quoted!("foo(do: :bar, __cursor__())",
+          token_metadata: true
+        )
+
+      assert quoted_to_string(ast) == "foo([{:do, :bar}, __cursor__()])"
+
+      ast =
+        Code.string_to_quoted!("foo(do: :bar, __cursor__())",
+          token_metadata: true,
+          literal_encoder: &{:ok, {:__block__, &2, [&1]}}
+        )
+
+      assert quoted_to_string(ast) == "foo([{:do, :bar}, __cursor__()])"
+    end
+
     test "list in module attribute" do
       assert quoted_to_string(
                quote do
