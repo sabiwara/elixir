@@ -1279,7 +1279,27 @@ defmodule Module.Types.Descr do
   defp map_only?(descr), do: empty?(Map.delete(descr, :map))
 
   # Union is list concatenation
-  defp map_union(dnf1, dnf2), do: dnf1 ++ (dnf2 -- dnf1)
+  defp map_union(dnf1, dnf2) do
+    with {[{t1, m1, []}], [{t2, m2, []}]} when map_size(m1) == map_size(m2) <- {dnf1, dnf2},
+         {keys, keys} <- {Map.keys(m1), Map.keys(m2)} do
+      t =
+        case {t1, t2} do
+          {:closed, :closed} -> :closed
+          _ -> :open
+        end
+
+      m =
+        Map.new(keys, fn key ->
+          {key, union(Map.fetch!(m1, key), Map.fetch!(m2, key))}
+        end)
+
+      # dbg(dnf1)
+      # dbg(dnf2)
+      [{t, m, []}]
+    else
+      _ -> dnf1 ++ (dnf2 -- dnf1)
+    end
+  end
 
   # Given two unions of maps, intersects each pair of maps.
   defp map_intersection(dnf1, dnf2) do
