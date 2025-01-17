@@ -1304,8 +1304,15 @@ defmodule Module.Types.Descr do
         end
     end
     |> case do
-      [] -> 0
-      acc -> acc
+      [] ->
+        0
+
+      acc ->
+        if length(acc) > 10 do
+          dbg(acc)
+        end
+
+        acc
     end
   end
 
