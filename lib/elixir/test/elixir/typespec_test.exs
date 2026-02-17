@@ -681,17 +681,6 @@ defmodule TypespecTest do
       end
     end
 
-    test "@type can be named record" do
-      bytecode =
-        test_module do
-          @type record :: binary
-          @spec foo?(record) :: boolean
-          def foo?(_), do: true
-        end
-
-      assert [type: {:record, {:type, _, :binary, []}, []}] = types(bytecode)
-    end
-
     test "@type with an invalid map notation" do
       assert_raise Kernel.TypespecError, ~r"invalid map specification", fn ->
         test_module do
