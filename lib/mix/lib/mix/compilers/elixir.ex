@@ -167,6 +167,9 @@ defmodule Mix.Compilers.Elixir do
         )
       end
 
+    # HACK
+    :ok = :elixir_code_server.call({:preexisting_mods, modules})
+
     stale = changed -- removed
 
     {sources, stale_exports} =

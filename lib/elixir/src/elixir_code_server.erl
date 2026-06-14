@@ -12,7 +12,8 @@
 -record(elixir_code_server, {
   required=#{},
   mod_pool={[], [], 0},
-  mod_ets=#{}
+  mod_ets=#{},
+  preexisting_mods=#{}
 }).
 
 call(Args) ->
@@ -30,6 +31,10 @@ init(ok) ->
   %% The table where we store module definitions
   _ = ets:new(elixir_modules, [set, public, named_table, {read_concurrency, true}]),
   {ok, #elixir_code_server{}}.
+
+handle_call({defmodule, Module, _Pid, _Tuple}, _From, #elixir_code_server{preexisting_mods=PreExisting} = Config) when is_map_key(Module, PreExisting) ->
+  #{Module := {module,module, [OldFile], _, _, _}} = PreExisting,
+  {reply, {error, {Module, nil, _OldLine = 0, OldFile, nil}}, Config};
 
 handle_call({defmodule, Module, Pid, Tuple}, _From, Config) ->
   case ets:lookup(elixir_modules, Module) of
@@ -55,6 +60,9 @@ handle_call({acquire, Path}, From, Config) ->
       Required = maps:put(Path, [], Current),
       {reply, proceed, Config#elixir_code_server{required=Required}}
   end;
+
+handle_call({preexisting_mods, Mods}, _From, Config) ->
+  {reply, ok, Config#elixir_code_server{preexisting_mods=Mods}};
 
 handle_call(required, _From, Config) ->
   {reply, [F || {F, true} <- maps:to_list(Config#elixir_code_server.required)], Config};

@@ -1051,6 +1051,32 @@ defmodule Mix.Tasks.Compile.ElixirTest do
     end)
   end
 
+  test "detects module conflicts when adding modules in incremental compilation" do
+    in_fixture("no_mixfile", fn ->
+      Mix.Project.push(MixTest.Case.Sample)
+
+      File.write!("lib/a.ex", """
+      defmodule A do
+        import Kernel, only: [defmodule: 2]
+        defmodule Nested do
+          import Kernel, only: []
+        end
+      end
+      """)
+
+      assert Mix.Tasks.Compile.Elixir.run([]) == {:ok, []}
+
+      File.write!("lib/b.ex", "defmodule A.Nested do import Kernel, only: [] end")
+
+      assert capture_io(:stderr, fn ->
+               assert {:error, _} = Mix.Tasks.Compile.Elixir.run(["--verbose"])
+             end) =~
+               "cannot define module A.Nested because it is currently being defined in lib/a.ex"
+    end)
+  after
+    purge([A, B, A.Nested])
+  end
+
   test "recompiles dependent changed modules without beam files" do
     in_fixture("no_mixfile", fn ->
       Mix.Project.push(MixTest.Case.Sample)
