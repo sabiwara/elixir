@@ -145,6 +145,7 @@ dispatch_require(Meta, Receiver, Name, Args, S, E, Callback) when is_atom(Receiv
 
   case elixir_rewrite:inline(Receiver, Name, Arity) of
     {AR, AN} ->
+      check_deprecated(function, Meta, Receiver, Name, Arity, E),
       elixir_env:trace({remote_function, Meta, Receiver, Name, Arity}, E),
       Callback(AR, AN);
     false ->
@@ -367,6 +368,8 @@ format_error({import, {ambiguous, [Mod1, Mod2 | _]}, Name, Arity}) ->
     [Name, Arity, elixir_aliases:inspect(Mod1), elixir_aliases:inspect(Mod2)]);
 format_error({compile_env, Name, Arity}) ->
   io_lib:format("Application.~s/~B is discouraged in the module body, use Application.compile_env/3 instead", [Name, Arity]);
+format_error({unsafe_to_atom, Name, Arity}) ->
+  io_lib:format("String.~s/~B is unsafe and discouraged at runtime, use to_existing_atom instead", [Name, Arity]);
 format_error({deprecated, Mod, '__using__', 1, Message}) ->
   io_lib:format("use ~s is deprecated. ~s", [elixir_aliases:inspect(Mod), Message]);
 format_error({deprecated, Mod, Fun, Arity, Message}) ->
@@ -426,6 +429,14 @@ check_deprecated(Kind, Meta, ?application, Name, Arity, E) ->
     #{module := Module, function := nil}
     when (Module /= nil) or (Kind == macro), (Name == get_env) orelse (Name == fetch_env) orelse (Name == 'fetch_env!') ->
       elixir_errors:file_warn(Meta, E, ?MODULE, {compile_env, Name, Arity});
+
+    _ ->
+      ok
+  end;
+check_deprecated(Kind, Meta, 'Elixir.String', to_atom = Name, Arity = 1, E) ->
+  case E of
+    #{function := Function} when Function /= nil, Kind /= macro ->
+      elixir_errors:file_warn(Meta, E, ?MODULE, {unsafe_to_atom, Name, Arity});
 
     _ ->
       ok
